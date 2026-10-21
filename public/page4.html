@@ -399,4 +399,75 @@ window.onload = () => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
         tg.ready();   
-        tg.expand
+        tg.expand();
+    }
+
+    // Retrieve storage items from Step 1 and Step 2
+    const amount = localStorage.getItem('loan_amount') || localStorage.getItem('amount') || localStorage.getItem('appliedAmount');
+    const term = localStorage.getItem('loan_term') || localStorage.getItem('appliedTerm') || localStorage.getItem('duration');
+    const purpose = localStorage.getItem('appliedPurpose') || localStorage.getItem('loanPurpose');
+    const fName = localStorage.getItem('firstName') || "";
+    const lName = localStorage.getItem('lastName') || "";
+    const phone = localStorage.getItem('phone') || localStorage.getItem('userPhone') || "";
+
+    // Format & Populate Summary
+    if (amount) {
+        const numAmount = Number(amount.toString().replace(/\D/g, ''));
+        document.getElementById('sumAmount').innerText = numAmount 
+            ? `${numAmount.toLocaleString('fr-FR')} Ar` 
+            : `${amount} Ar`;
+    } else {
+        document.getElementById('sumAmount').innerText = "--";
+    }
+
+    document.getElementById('sumDuration').innerText = term ? `${term} Mois` : "--";
+    document.getElementById('sumPurpose').innerText = purpose ? purpose : "--";
+    document.getElementById('sumName').innerText = `${fName} ${lName}`.trim() || "--";
+    document.getElementById('sumPhone').innerText = phone ? `+261 ${phone}` : "--";
+};
+
+function submitForm(event) {
+    event.preventDefault();
+    const tg = window.Telegram?.WebApp;
+    const incomeVal = document.getElementById('income').value.trim();
+
+    if (!incomeVal) {
+        alert("Veuillez indiquer votre revenu mensuel moyen.");
+        return;
+    }
+
+    const data = {
+        amount: localStorage.getItem('loan_amount') || localStorage.getItem('amount') || localStorage.getItem('appliedAmount'),
+        duration: localStorage.getItem('loan_term') || localStorage.getItem('appliedTerm') || localStorage.getItem('duration'),
+        purpose: localStorage.getItem('appliedPurpose') || localStorage.getItem('loanPurpose'),
+        firstName: localStorage.getItem('firstName'),
+        lastName: localStorage.getItem('lastName'),
+        email: localStorage.getItem('email'),
+        phone: localStorage.getItem('phone') || localStorage.getItem('userPhone'),
+        jobStatus: document.getElementById('jobStatus').value,
+        income: incomeVal,
+        currency: "Ar"
+    };
+
+    // Save final submission profile details
+    localStorage.setItem('jobStatus', data.jobStatus);
+    localStorage.setItem('income', incomeVal);
+
+    if (tg && tg.sendData) {
+        tg.sendData(JSON.stringify(data));
+        setTimeout(() => {
+            window.location.href = "/page5";
+        }, 300);
+    } else {
+        console.log("Submitted payload:", data);
+        window.location.href = "/page5";
+    }
+}
+
+function goBack() {
+    window.location.href = "/page3";
+}
+</script>
+
+</body>
+</html>
